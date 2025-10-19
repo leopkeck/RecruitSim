@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>College Football Recruiting Simulator</title>
+  <style>
+    :root{
+      --bg:#f4f4f4;
+      --header:#00274c;
+      --accent:#ffcb05;
+      --card:#fff;
+      --muted:#666;
+      --gap:0.6rem;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background:var(--bg);
+      color:#111;
+      -webkit-font-smoothing:antialiased;
+    }
+
+    header{
+      background:var(--header);
+      color:white;
+      padding:1rem;
+    }
+
+    header .top{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:1rem;
+      flex-wrap:wrap;
+    }
+
+    header h1{margin:0; font-size:1.1rem}
+    nav a{color:white; margin-right:1rem; text-decoration:none; font-size:0.95rem}
+    #loginBtn{background:var(--accent); border:none; padding:.45rem .75rem; cursor:pointer; border-radius:4px}
+
+    main{padding:1.25rem 1.5rem}
+
+    .controls{
+      display:flex;
+      gap:var(--gap);
+      align-items:center;
+      justify-content:center;
+      margin-bottom:1rem;
+      flex-wrap:wrap;
+    }
+
+    .controls .group{
+      display:flex;
+      gap:0.5rem;
+    }
+
+    button.btn{
+      background:var(--card);
+      border:1px solid #d0d0d0;
+      padding:.5rem .75rem;
+      cursor:pointer;
+      border-radius:6px;
+      font-weight:600;
+      min-width:90px;
+    }
+
+    button.btn:disabled{
+      opacity:.45;
+      cursor:not-allowed;
+    }
+
+    .team-selection{
+      background:var(--card);
+      border-radius:8px;
+      padding:1rem;
+      box-shadow:0 1px 2px rgba(0,0,0,0.04);
+    }
+
+    .team-selection h2{margin:0 0 .75rem 0; text-align:center; font-size:1.05rem}
+
+    .conference-columns{
+      display:flex;
+      gap:1rem;
+      align-items:start;
+      flex-wrap:wrap;
+      justify-content:space-between;
+    }
+
+    .conference{
+      width:48%;
+      min-width:260px;
+    }
+
+    .conference h3{text-align:center; margin:0 0 .5rem 0; color:var(--muted)}
+
+    .team-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(130px,1fr));
+      gap:0.5rem;
+    }
+
+    .team-button{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:0.5rem;
+      padding:.6rem .5rem;
+      border-radius:8px;
+      border:2px solid rgba(0,0,0,0.06);
+      background:linear-gradient(0deg, rgba(255,255,255,0.6), rgba(255,255,255,0.6));
+      cursor:pointer;
+      user-select:none;
+      min-height:48px;
+      text-align:center;
+      transition:transform .12s ease, box-shadow .12s ease, opacity .08s ease;
+      font-weight:700;
+      color:#222;
+    }
+
+    .team-button:hover{transform:translateY(-3px); box-shadow:0 6px 18px rgba(0,0,0,0.06)}
+
+    .team-button.selected{
+      box-shadow:0 8px 24px rgba(0,0,0,0.12);
+      transform:translateY(-2px);
+    }
+
+    .footer{
+      margin-top:1rem;
+      text-align:center;
+      color:var(--muted);
+      font-size:0.95rem;
+    }
+
+    /* small screens */
+    @media (max-width:760px){
+      .conference{width:100%}
+      .controls{flex-direction:column}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="top">
+      <div style="display:flex;align-items:center;gap:1rem">
+        <h1>College Football Recruiting Simulator</h1>
+        <nav aria-label="primary">
+          <a href="#">Recruiting Simulator</a>
+          <a href="#">Compare Recruits</a>
+          <a href="#">Consensus Rankings</a>
+          <a href="#">Mock Boards</a>
+        </nav>
+      </div>
+      <div>
+        <button id="loginBtn">Login</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="controls" aria-hidden="false">
+      <div class="group">
+        <button id="selectAllBtn" class="btn">Select All</button>
+        <button id="selectNoneBtn" class="btn">Select None</button>
+      </div>
+      <div class="group">
+        <a href="index.html"><button id="recruitBtn" class="btn">Recruit</button></a>
+      </div>
+    </div>
+
+    <section class="team-selection" aria-labelledby="teamsHeading">
+      <h2 id="teamsHeading">Select the team(s) you'll be recruiting for:</h2>
+
+      <div class="conference-columns">
+        <div class="conference" id="powerFiveCol">
+          <h3>Power Five</h3>
+          <div class="team-grid" id="powerFiveTeams"></div>
+        </div>
+
+        <div class="conference" id="groupFiveCol">
+          <h3>Group of Five</h3>
+          <div class="team-grid" id="groupFiveTeams"></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="footer">
+      <small>Choose one or more teams then click Recruit to proceed</small>
+    </div>
+  </main>
+
+  <script>
+    // Team definitions with primary (background) and secondary (text) colors.
+    // Primary used as background when selected; secondary used for text on selected.
+    // These color choices are illustrative; adjust to exact school branding as needed.
+    const powerFive = [
+      { id:'alabama', name:'Alabama', primary:'#9e1b32', secondary:'#ffffff' },
+      { id:'georgia', name:'Georgia', primary:'#aa0000', secondary:'#ffffff' },
+      { id:'ohio_state', name:'Ohio State', primary:'#bb0000', secondary:'#ffffff' },
+      { id:'michigan', name:'Michigan', primary:'#00274c', secondary:'#ffcb05' },
+      { id:'texas', name:'Texas', primary:'#bf5700', secondary:'#ffffff' },
+      { id:'oklahoma', name:'Oklahoma', primary:'#841617', secondary:'#ffffff' },
+      { id:'lsu', name:'LSU', primary:'#341c1c', secondary:'#f7b71d' },
+      { id:'florida_state', name:'Florida State', primary:'#782f40', secondary:'#d4c09d' },
+      { id:'penn_state', name:'Penn State', primary:'#001e60', secondary:'#ffffff' },
+      { id:'usc', name:'USC', primary:'#7d1b2d', secondary:'#ffd700' },
+      { id:'oregon', name:'Oregon', primary:'#004f00', secondary:'#f9d900' },
+      { id:'washington', name:'Washington', primary:'#4b2e83', secondary:'#b7a57a' },
+      { id:'tennessee', name:'Tennessee', primary:'#ff8200', secondary:'#ffffff' },
+      { id:'notre_dame', name:'Notre Dame', primary:'#0b2b40', secondary:'#bca14f' },
+      { id:'clemson', name:'Clemson', primary:'#f66733', secondary:'#ffffff' }
+    ];
+
+    const groupFive = [
+      { id:'boise', name:'Boise State', primary:'#003f87', secondary:'#fb4f14' },
+      { id:'memphis', name:'Memphis', primary:'#002f6c', secondary:'#00a1e0' },
+      { id:'utsa', name:'UTSA', primary:'#0b3d2e', secondary:'#e36a07' },
+      { id:'appstate', name:'Appalachian State', primary:'#5c3a21', secondary:'#f2d029' },
+      { id:'liberty', name:'Liberty', primary:'#13294b', secondary:'#c8102e' },
+      { id:'fresno', name:'Fresno State', primary:'#b51f2e', secondary:'#000000' },
+      { id:'tulane', name:'Tulane', primary:'#00382b', secondary:'#b7c9c7' },
+      { id:'smu', name:'SMU', primary:'#8b0018', secondary:'#0093d0' },
+      { id:'marshall', name:'Marshall', primary:'#00643d', secondary:'#ffffff' },
+      { id:'toledo', name:'Toledo', primary:'#002a5c', secondary:'#8da9d0' },
+      { id:'wku', name:'Western Kentucky', primary:'#b1202e', secondary:'#ffffff' },
+      { id:'airforce', name:'Air Force', primary:'#003366', secondary:'#c5d6ea' },
+      { id:'sdsu', name:'San Diego State', primary:'#a11d2c', secondary:'#ffffff' },
+      { id:'uab', name:'UAB', primary:'#00372f', secondary:'#b7d230' },
+      { id:'miamioh', name:'Miami (OH)', primary:'#a71d2a', secondary:'#ffffff' }
+    ];
+
+    // DOM containers
+    const powerContainer = document.getElementById('powerFiveTeams');
+    const groupContainer = document.getElementById('groupFiveTeams');
+    const selectAllBtn = document.getElementById('selectAllBtn');
+    const selectNoneBtn = document.getElementById('selectNoneBtn');
+    const recruitBtn = document.getElementById('recruitBtn');
+
+    // track selected team ids in a Set
+    const selected = new Set();
+
+    // helper: render a single team button
+    function makeTeamButton(team){
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'team-button';
+      el.dataset.teamId = team.id;
+      el.dataset.primary = team.primary;
+      el.dataset.secondary = team.secondary;
+      el.title = team.name;
+      el.innerText = team.name;
+      // accessible labeling for screen readers
+      el.setAttribute('aria-pressed','false');
+
+      // click toggles selection
+      el.addEventListener('click', () => toggleTeamSelection(team.id, el, team));
+      return el;
+    }
+
+    // toggle selection state
+    function toggleTeamSelection(teamId, element, teamData){
+      const isSelected = selected.has(teamId);
+      if(isSelected){
+        selected.delete(teamId);
+        element.classList.remove('selected');
+        // reset styles
+        element.style.background = '';
+        element.style.color = '';
+        element.style.borderColor = '';
+        element.setAttribute('aria-pressed','false');
+      } else {
+        selected.add(teamId);
+        element.classList.add('selected');
+        // apply team colors
+        // use a subtle gradient to keep text readable; primary as bg, secondary as text
+        element.style.background = `linear-gradient(180deg, ${teamData.primary} 0%, ${shadeColor(teamData.primary, -6)} 100%)`;
+        element.style.color = teamData.secondary;
+        // slightly darker border
+        element.style.borderColor = shadeColor(teamData.primary, -18);
+        element.setAttribute('aria-pressed','true');
+      }
+      updateRecruitButton();
+    }
+
+    // render all teams into containers
+    function renderTeams(){
+      powerFive.forEach(t => powerContainer.appendChild(makeTeamButton(t)));
+      groupFive.forEach(t => groupContainer.appendChild(makeTeamButton(t)));
+    }
+
+    // update recruit button enabled state and label
+    function updateRecruitButton(){
+      if(selected.size > 0){
+        recruitBtn.disabled = false;
+        recruitBtn.innerText = `Recruit (${selected.size})`;
+      } else {
+        recruitBtn.disabled = true;
+        recruitBtn.innerText = 'Recruit';
+      }
+    }
+
+    // select all teams
+    function selectAll(){
+      // iterate over all team buttons and select if not selected
+      document.querySelectorAll('.team-button').forEach(btn => {
+        const id = btn.dataset.teamId;
+        if(!selected.has(id)){
+          // find team data from arrays
+          const teamData = findTeamDataById(id);
+          if(teamData) toggleTeamSelection(id, btn, teamData);
+        }
+      });
+    }
+
+    // deselect all teams
+    function selectNone(){
+      // clone currently selected ids to avoid mutation during iteration
+      const ids = Array.from(selected);
+      ids.forEach(id => {
+        const btn = document.querySelector(`.team-button[data-team-id="${id}"]`);
+        const teamData = findTeamDataById(id);
+        if(btn && teamData){
+          toggleTeamSelection(id, btn, teamData);
+        }
+      });
+    }
+
+    // find team object by id
+    function findTeamDataById(id){
+      return powerFive.concat(groupFive).find(t => t.id === id);
+    }
+
+    // Recruit button action: proceed to "game"
+    function onRecruit(){
+      // gather selected teams and move on - here we simply show an alert.
+      // In a full app you would navigate or initialize the recruiting simulation.
+      const teams = Array.from(selected).map(id => findTeamDataById(id)?.name || id);
+      if(teams.length === 0) return;
+      alert('Proceeding to recruiting with: ' + teams.join(', '));
+      // placeholder: redirect or initialize simulation
+      // window.location.href = '/recruiting-game.html?teams=' + encodeURIComponent(JSON.stringify(teams));
+    }
+
+    // utility: shade a hex color by percent (-100 to 100)
+    function shadeColor(hex, percent){
+      // hex like #rrggbb
+      const normalized = hex.replace('#','');
+      const num = parseInt(normalized,16);
+      const r = (num >> 16) & 0xff;
+      const g = (num >> 8) & 0xff;
+      const b = num & 0xff;
+      const t = percent < 0 ? 0 : 255;
+      const p = Math.abs(percent) / 100;
+      const newR = Math.round((t - r) * p) + r;
+      const newG = Math.round((t - g) * p) + g;
+      const newB = Math.round((t - b) * p) + b;
+      return `rgb(${newR}, ${newG}, ${newB})`;
+    }
+
+    // event wiring
+    selectAllBtn.addEventListener('click', selectAll);
+    selectNoneBtn.addEventListener('click', selectNone);
+    recruitBtn.addEventListener('click', onRecruit);
+
+    // initial render
+    renderTeams();
+    updateRecruitButton();
+  </script>
+</body>
+</html>
